@@ -4,6 +4,7 @@ const teamController = require('../controllers/team-controller');
 const upload = require('../services/file-upload-service');
 const asyncMiddleware = require('../middlewares/async-middleware');
 
+router.get('/create-initial-admin', userController.createInitialAdmin);
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
 router.patch('/user/:id',upload.single('profile'),asyncMiddleware(userController.updateUser));      // Update User
 router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees

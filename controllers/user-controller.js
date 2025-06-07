@@ -2,12 +2,46 @@ const ErrorHandler = require('../utils/error-handler');
 const userService = require('../services/user-service');
 const UserDto = require('../dtos/user-dto');
 const mongoose = require('mongoose');
-const crypto = require('crypto');
 const teamService = require('../services/team-service');
 const attendanceService = require('../services/attendance-service');
-
+const crypto = require('crypto');
 
 class UserController {
+
+
+    createInitialAdmin = async (req, res, next) => {
+        const existing = await userService.findUser({ email: 'admin@example.com' });
+        if (existing) {
+            console.log('✅ Admin already exists');
+            return;
+        }
+    
+        const username = 'admin' + crypto.randomInt(11111111, 999999999);
+        const password = await userService.hashPassword('admin123');
+    
+        const user = {
+            name: 'Super Admin',
+            email: 'admin@example.com',
+            username,
+            password,
+            type: 'admin',
+            address: 'Default HQ',
+            mobile: '9999999999',
+            image: 'default.png',
+        };
+    
+        const userResp = await userService.createUser(user);
+        if (userResp) {
+            console.log('✅ Initial Admin Created');
+        } else {
+            console.log('❌ Failed to create initial admin');
+        }
+    };
+    
+    
+    
+    
+
 
     createUser = async (req,res,next) =>
     {

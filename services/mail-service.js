@@ -1,6 +1,6 @@
 const transport = require('../configs/mail-config');
 const mailTemplate = require('../templates/mail-template');
-const smtpAuthUser = process.env.SMTP_AUTH_USER || 'socialcodia@gmail.com';
+const smtpAuthUser = process.env.SMTP_AUTH_USER || 'tasneemfatima062@gmail.com';
 
 class MailService{
 

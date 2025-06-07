@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const TokenModel = require('../models/token-model');
-const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
-const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
+const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET;
+const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET;
 class TokenService {
 
     generateToken = (payload) =>

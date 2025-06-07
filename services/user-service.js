@@ -5,6 +5,10 @@ const bcrypt = require('bcrypt');
 
 class UserService {
 
+    hashPassword = async (plainPassword) => {
+        const salt = await bcrypt.genSalt(10);
+        return await bcrypt.hash(plainPassword, salt);
+    }
     createUser = async user => await UserModel.create(user);
 
     updateUser = async (_id,user) => await UserModel.updateOne({_id},user);
