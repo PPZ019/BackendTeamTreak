@@ -3,54 +3,58 @@ const express = require('express');
 const PORT = process.env.PORT || 5500;
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const bodyParser = require("body-parser");
 const dbConnection = require('./configs/db-config');
+
 const authRoute = require('./routes/auth-route');
 const adminRoute = require('./routes/admin-route');
 const employeeRoute = require('./routes/employee-route');
 const leaderRoute = require('./routes/leader-route');
+const chatRoute = require('./routes/chat-route'); // ✅ Chat route
+
 const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
-const {auth, authRole} = require('./middlewares/auth-middleware');
+const { auth, authRole } = require('./middlewares/auth-middleware');
+
 const app = express();
 
-// Database Connection
+// ✅ Database Connection
 dbConnection();
 
-const {CLIENT_URL} = process.env;
-console.log(CLIENT_URL);
+// ✅ Environment URL
+const { CLIENT_URL } = process.env;
+console.log("Client URL:", CLIENT_URL);
 
-//Cors Option
+// ✅ CORS Configuration
 const corsOption = {
-    credentials:true,
-    origin:['http://localhost:3000','http://1.1.1.111:3000', CLIENT_URL, '*']
-}
-
-//Configuration
+  origin: ['http://localhost:3000', 'http://localhost:5173'], // Allow React + Vite
+  credentials: true,
+};
 app.use(cors(corsOption));
+
+// ✅ Middleware Setup
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// Routes
-app.use('/api/auth',authRoute);
-app.use('/api/admin',auth,authRole(['admin']),adminRoute);
-app.use('/api/employee',auth,authRole(['employee','leader']),employeeRoute);
-app.use('/api/leader',auth,authRole(['leader']),leaderRoute);
+// ✅ Routes
+app.use('/api/auth', authRoute);
+app.use('/api/admin', auth, authRole(['admin']), adminRoute);
+app.use('/api/employee', auth, authRole(['employee', 'leader']), employeeRoute);
+app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
+app.use('/api/chat', chatRoute); // ✅ AI chat route
 
+// ✅ Static Files
+app.use('/storage', express.static('storage'));
 
-app.use('/storage',express.static('storage'))
-
-//Middlewares;
-app.use((req,res,next)=>
-{
-    return next(ErrorHandler.notFound('The Requested Resources Not Found'));
+// ✅ 404 Handler
+app.use((req, res, next) => {
+  return next(ErrorHandler.notFound('The Requested Resource Was Not Found'));
 });
 
-app.use(errorMiddleware)
+// ✅ Error Middleware
+app.use(errorMiddleware);
 
-
-
-
-
-app.listen(PORT,()=>console.log(`Listening On Port : ${PORT}`));
+// ✅ Start Server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
