@@ -37,21 +37,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-<<<<<<< Updated upstream
 // ✅ Routes
 app.use('/api/auth', authRoute);
 app.use('/api/admin', auth, authRole(['admin']), adminRoute);
 app.use('/api/employee', auth, authRole(['employee', 'leader']), employeeRoute);
 app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
 app.use('/api/chat', chatRoute); // ✅ AI chat route
-=======
-// Routes
-app.use('/api/auth',authRoute);
-app.use('/api/admin',auth,authRole(['admin']),adminRoute);
-app.use('/api/employee',auth,authRole(['employee','leader']),employeeRoute);
-app.use('/api/leader',auth,authRole(['leader']),leaderRoute);
 app.use('/api/invoice', invoiceRoutes);
->>>>>>> Stashed changes
+
+// Routes
+
+
 
 // ✅ Static Files
 app.use('/storage', express.static('storage'));
