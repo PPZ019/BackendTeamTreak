@@ -8,5 +8,6 @@ router.get('/:id', ctrl.getInvoice);
 router.put('/:id', ctrl.updateInvoice);
 router.delete('/:id', ctrl.deleteInvoice);
 router.post('/:id/recordPayment', ctrl.recordPayment);
+// router.get('/invoiceSummary', ctrl.getInvoiceSummary);
 
 module.exports = router;

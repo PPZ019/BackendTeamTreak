@@ -88,3 +88,4 @@ exports.recordPayment = async (req, res) => {
   await inv.save();
   res.json({ success: true, result: inv });
 };
+
