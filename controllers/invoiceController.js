@@ -88,4 +88,74 @@ exports.recordPayment = async (req, res) => {
   await inv.save();
   res.json({ success: true, result: inv });
 };
+const dayjs = require("dayjs");
+
+exports.getInvoiceSummary = async (req, res) => {
+    try {
+      const { range = "month" } = req.query;
+  
+      const now = dayjs();
+      let currentStart, previousStart, previousEnd;
+  
+      if (range === "today") {
+        currentStart = now.startOf("day");
+        previousStart = currentStart.subtract(1, "day");
+        previousEnd = currentStart;
+      } else if (range === "week") {
+        currentStart = now.startOf("week");
+        previousStart = currentStart.subtract(1, "week");
+        previousEnd = currentStart;
+      } else {
+        currentStart = now.startOf("month");
+        previousStart = currentStart.subtract(1, "month");
+        previousEnd = currentStart;
+      }
+  
+      const [currentInvoices, previousInvoices] = await Promise.all([
+        Invoice.find({ createdAt: { $gte: currentStart.toDate(), $lt: now.toDate() } }),
+        Invoice.find({ createdAt: { $gte: previousStart.toDate(), $lt: previousEnd.toDate() } }),
+      ]);
+  
+      const calculateTotals = (invoices) => {
+        let totalPaid = 0;
+        let totalUnpaid = 0;
+  
+        invoices.forEach((inv) => {
+          const paid = inv.credit || 0;
+          const unpaid = (inv.total || 0) - paid;
+  
+          totalPaid += paid;
+          if (unpaid > 0) totalUnpaid += unpaid;
+        });
+  
+        return {
+          totalPaid: Number(totalPaid.toFixed(2)),
+          totalUnpaid: Number(totalUnpaid.toFixed(2)),
+          totalInvoices: invoices.length,
+        };
+      };
+  
+      const current = calculateTotals(currentInvoices);
+      const previous = calculateTotals(previousInvoices);
+  
+      // ✅ Count pending invoices
+      const pendingInvoices = currentInvoices.filter(inv => inv.status === "pending").length;
+  
+      res.json({
+        success: true,
+        result: {
+          ...current,
+          previousPaid: previous.totalPaid,
+          previousUnpaid: previous.totalUnpaid,
+          previousInvoices: previous.totalInvoices,
+          pendingInvoices, // ✅ Add to result
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  };
+
+  
+  
 

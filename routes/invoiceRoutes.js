@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/invoiceController');
 
-router.post('/', ctrl.createInvoice);
-router.get('/', ctrl.getInvoices);
+router.get('/invoiceSummary', ctrl.getInvoiceSummary);
 router.get('/:id', ctrl.getInvoice);
+router.get('/', ctrl.getInvoices);
+router.post('/', ctrl.createInvoice);
 router.put('/:id', ctrl.updateInvoice);
 router.delete('/:id', ctrl.deleteInvoice);
 router.post('/:id/recordPayment', ctrl.recordPayment);
-// router.get('/invoiceSummary', ctrl.getInvoiceSummary);
 
 module.exports = router;
