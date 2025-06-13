@@ -89,39 +89,60 @@ class AuthController {
         return (response.modifiedCount===1) ? res.json({success:true,message:'Logout Successfully'}) : next(ErrorHandler.unAuthorized());
     }
 
-    refresh = async (req,res,next) =>
-    {
-        const {refreshToken:refreshTokenFromCookie} = req.cookies;
-        if(!refreshTokenFromCookie) return next(ErrorHandler.unAuthorized());
-        const userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
-        const {_id,email,username,type} = userData;
-        const token = await tokenService.findRefreshToken(_id,refreshTokenFromCookie);
-        if(!token)
-        {
-            res.clearCookie('refreshToken');
-            res.clearCookie('accessToken');
-            return res.status(401).json({success:false,message:'Unauthorized Access'})
-        }
-        const user = await userService.findUser({email});
-        if(user?.status!='active') return next(ErrorHandler.unAuthorized('There is a problem with your account, Please contact to the admin'));
-        const payload = {
-            _id,
-            email,
-            username,
-            type
-        }
-        const {accessToken,refreshToken} = tokenService.generateToken(payload);
-        await tokenService.updateRefreshToken(_id,refreshTokenFromCookie,refreshToken);
-        res.cookie('accessToken',accessToken,{
-            maxAge:1000*60*60*24*30,
-            httpOnly:true
-        })
-        res.cookie('refreshToken',refreshToken,{
-            maxAge:1000*60*60*24*30,
-            httpOnly:true
-        })
-        res.json({success:true,message:'Secure access has been granted',user:new UserDto(user)})
+    refresh = async (req, res, next) => {
+    const { refreshToken: refreshTokenFromCookie } = req.cookies;
+
+    if (!refreshTokenFromCookie) {
+        console.log('❌ No refresh token in cookies');
+        return next(ErrorHandler.unAuthorized());
     }
+
+    let userData;
+    try {
+        userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
+    } catch (err) {
+        console.log('❌ Invalid refresh token', err.message);
+        return next(ErrorHandler.unAuthorized());
+    }
+
+    const { _id, email, username, type } = userData;
+
+    const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
+    if (!token) {
+        console.log('❌ Refresh token not found in DB');
+        res.clearCookie('refreshToken');
+        res.clearCookie('accessToken');
+        return res.status(401).json({ success: false, message: 'Unauthorized Access' });
+    }
+
+    const user = await userService.findUser({ email });
+    if (user?.status !== 'active') {
+        return next(ErrorHandler.unAuthorized('There is a problem with your account, please contact admin'));
+    }
+
+    const payload = { _id, email, username, type };
+    const { accessToken, refreshToken } = tokenService.generateToken(payload);
+
+    await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
+
+    res.cookie('accessToken', accessToken, {
+        maxAge: 1000 * 60 * 60 * 24 * 30,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+        maxAge: 1000 * 60 * 60 * 24 * 30,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+
+    console.log('✅ Tokens refreshed');
+    res.json({ success: true, message: 'Secure access has been granted', user: new UserDto(user) });
+};
+
 
 }
 
