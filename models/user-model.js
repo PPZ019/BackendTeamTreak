@@ -42,7 +42,7 @@ const userSchema = new Schema({
     },
     type:{
         type:String,
-        enum:['admin','employee','leader']
+        enum:['admin','employee','client']
     },
     status:{
         type:String,
@@ -63,7 +63,11 @@ const userSchema = new Schema({
         default:'No Address Specified',
         maxlength:100,
         trim:true
-    }
+    },
+    company: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company"
+      },      
 },{
     timestamps:true
 });

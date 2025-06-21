@@ -10,11 +10,15 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const adminRoute = require('./routes/admin-route');
 const employeeRoute = require('./routes/employee-route');
 const leaderRoute = require('./routes/leader-route');
-const chatRoute = require('./routes/chat-route'); // ✅ Chat route
+const chatRoute = require('./routes/chat-route');
+const companyRoutes = require('./routes/company-routes'); 
+const holidayRoutes = require('./routes/holiday-routes'); 
+const salaryRoutes = require('./routes/salary-routes'); 
 
 const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const { auth, authRole } = require('./middlewares/auth-middleware');
+const announcementRoutes = require('./routes/announcementRoutes');
 
 const app = express();
 
@@ -44,6 +48,11 @@ app.use('/api/employee', auth, authRole(['employee', 'leader']), employeeRoute);
 app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
 app.use('/api/chat', chatRoute); // ✅ AI chat route
 app.use('/api/invoice', invoiceRoutes);
+app.use("/api", companyRoutes);
+app.use("/api", holidayRoutes);
+app.use("/api/salary", salaryRoutes);
+app.use("/api/announcements", announcementRoutes);
+
 
 // Routes
 

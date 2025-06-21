@@ -11,7 +11,8 @@ class UserDto {
     status;
     team;
     constructor(user) {
-        this.id = user._id,
+        this._id = user._id; // ✅ Add this line
+        this.id = user._id; 
             this.name = user.name,
             this.username = user.username,
             this.email = user.email,
