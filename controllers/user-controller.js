@@ -9,6 +9,7 @@ const attendanceService = require('../services/attendance-service');
 
 class UserController {
 
+<<<<<<< Updated upstream
     createUser = async (req,res,next) =>
     {
         const file = req.file;
@@ -29,167 +30,248 @@ class UserController {
         const user = {
             name,email,username,mobile,password,type,address,image:file.filename
         }
+=======
 
-        
-        // console.log("Hello! I am here in create user");
-        // console.log(user)
-        
+    createInitialAdmin = async (req, res, next) => {
+        const existing = await userService.findUser({ email: 'admin@example.com' });
+        if (existing) {
+            console.log('✅ Admin already exists');
+            return;
+        }
+
+        const username = 'admin' + crypto.randomInt(11111111, 999999999);
+        const password = await userService.hashPassword('admin123');
+
+        const user = {
+            name: 'Super Admin',
+            email: 'admin@example.com',
+            username,
+            password,
+            type: 'admin',
+            address: 'Default HQ',
+            mobile: '9999999999',
+            image: 'default.png',
+        };
+
         const userResp = await userService.createUser(user);
-       
-        
+        if (userResp) {
+            console.log('✅ Initial Admin Created');
+        } else {
+            console.log('❌ Failed to create initial admin');
+        }
+    };
 
-        if(!userResp) return next(ErrorHandler.serverError('Failed To Create An Account'));
-        res.json({success:true,message:'User has been Added',user:new UserDto(user)});
+
+>>>>>>> Stashed changes
+
+
+
+
+    createUser = async (req, res, next) => {
+    try {
+      /* 1. incoming data + file */
+      const file = req.file;
+      let { name, email, password, type, address, mobile, adminPassword } = req.body;
+      const username = 'user' + crypto.randomInt(11111111, 999999999);
+
+      /* 2. basic validations */
+      if (!file || !file.path)           return next(ErrorHandler.badRequest('Profile image is required'));
+      if (!name || !email || !password || !type || !address || !mobile)
+        return next(ErrorHandler.badRequest('All fields are required'));
+
+      /* 3. normalise type */
+      type = type.trim();
+      type = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();   // employee → Employee
+      const allowedTypes = ['Admin', 'Employee', 'Leader'];
+      if (!allowedTypes.includes(type))
+        return next(ErrorHandler.badRequest('Invalid user type'));
+
+      /* 4. duplicate email / username check */
+      const duplicate = await userService.findUser({
+        $or: [{ email: email.toLowerCase() }, { username }],
+      });
+      if (duplicate)
+        return next(ErrorHandler.badRequest('Email or username already exists'));
+
+      /* 5. extra security check for Admin */
+      if (type === 'Admin') {
+        if (!adminPassword)
+          return next(ErrorHandler.badRequest(`Enter your password to add ${name} as Admin`));
+
+        const { _id } = req.user; // requester
+        const { password: hashPw } = await userService.findUser({ _id }).select('+password');
+        const validPw = await userService.verifyPassword(adminPassword, hashPw);
+        if (!validPw) return next(ErrorHandler.unAuthorized('Wrong admin password'));
+      }
+
+      /* 6. image URL from Cloudinary (multer-storage-cloudinary provides .path) */
+      const imageUrl = file.path; // already full HTTPS url
+
+      /* 7. build payload */
+      const payload = {
+        name,
+        email: email.toLowerCase(),
+        username,
+        mobile,
+        password,
+        type,
+        address,
+        image: imageUrl,
+      };
+
+      /* 8. create user */
+      const userResp = await userService.createUser(payload);
+      if (!userResp) return next(ErrorHandler.serverError('User not created'));
+
+      return res.status(201).json({
+        success: true,
+        message: 'User created',
+        data: new UserDto(userResp),
+      });
+    } catch (err) {
+      console.error('🔥 createUser error:', err);
+      return next(ErrorHandler.serverError(err.message));
     }
+  };
 
-    updateUser = async (req,res,next) =>
-    {
+
+    updateUser = async (req, res, next) => {
         const file = req.file;
         const filename = file && file.filename;
-        let user,id;
+        let user, id;
         console.log(req.user.type);
-        if(req.user.type==='admin')
-        {
-            const {id} = req.params;
-            let {name,username,email,password,type,status, address, mobile} = req.body;
+        if (req.user.type === 'admin') {
+            const { id } = req.params;
+            let { name, username, email, password, type, status, address, mobile } = req.body;
             type = type && type.toLowerCase();
-            if(!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid User Id'));
-            if(type)
-            {
-                const dbUser = await userService.findUser({_id:id});
-                if(!dbUser) return next(ErrorHandler.badRequest('No User Found'));
-                if(dbUser.type!=type)
-                { 
-                    const {_id} = req.user;
-                    if(_id===id) return next(ErrorHandler.badRequest(`You Can't Change Your Own Position`));
-                    const {adminPassword} = req.body;
-                    if(!adminPassword)
+            if (!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid User Id'));
+            if (type) {
+                const dbUser = await userService.findUser({ _id: id });
+                if (!dbUser) return next(ErrorHandler.badRequest('No User Found'));
+                if (dbUser.type != type) {
+                    const { _id } = req.user;
+                    if (_id === id) return next(ErrorHandler.badRequest(`You Can't Change Your Own Position`));
+                    const { adminPassword } = req.body;
+                    if (!adminPassword)
                         return next(ErrorHandler.badRequest(`Please Enter Your Password To Change The Type`));
-                    const {password:hashPassword} = await userService.findUser({_id});
-                    const isPasswordValid = await userService.verifyPassword(adminPassword,hashPassword);
-                    if(!isPasswordValid) return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
-    
-                    if((dbUser.type==='employee') && (type==='admin' || type==='leader'))
-                        if(dbUser.team!=null) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is in a team.`));
-    
-                    if((dbUser.type==='leader') && (type==='admin' || type==='employee'))
-                        if(await teamService.findTeam({leader:id})) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is leading a team.`));
+                    const { password: hashPassword } = await userService.findUser({ _id });
+                    const isPasswordValid = await userService.verifyPassword(adminPassword, hashPassword);
+                    if (!isPasswordValid) return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
+
+                    if ((dbUser.type === 'employee') && (type === 'admin' || type === 'leader'))
+                        if (dbUser.team != null) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is in a team.`));
+
+                    if ((dbUser.type === 'leader') && (type === 'admin' || type === 'employee'))
+                        if (await teamService.findTeam({ leader: id })) return next(ErrorHandler.badRequest(`Error : ${dbUser.name} is leading a team.`));
                 }
             }
             user = {
-                name,email,status,username,mobile,password,type,address,image:filename
+                name, email, status, username, mobile, password, type, address, image: filename
             }
         }
-        else
-        {
-            id =  req.user._id;
-            let {name,username,address,mobile} = req.body;
+        else {
+            id = req.user._id;
+            let { name, username, address, mobile } = req.body;
             user = {
-                name,username,mobile,address,image:filename
+                name, username, mobile, address, image: filename
             }
         }
         // console.log(user);
-        const userResp = await userService.updateUser(id,user);
+        const userResp = await userService.updateUser(id, user);
         // console.log(userResp);
-        if(!userResp) return next(ErrorHandler.serverError('Failed To Update Account'));
-        res.json({success:true,message:'Account Updated'});
+        if (!userResp) return next(ErrorHandler.serverError('Failed To Update Account'));
+        res.json({ success: true, message: 'Account Updated' });
     }
 
-    getUsers = async (req,res,next) =>
-    {
-        const type = req.path.split('/').pop().replace('s','');
-        const emps = await userService.findUsers({type});
-        if(!emps || emps.length<1) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} Found`));
-        const employees = emps.map((o)=> new UserDto(o));
-        res.json({success:true,message:`${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} List Found`,data:employees})
-    }
-
-
-    getFreeEmployees = async (req,res,next) =>
-    {
-        const emps = await userService.findUsers({type:'employee',team:null});
-        if(!emps || emps.length<1) return next(ErrorHandler.notFound(`No Free Employee Found`));
-        const employees = emps.map((o)=> new UserDto(o));
-        res.json({success:true,message:'Free Employees List Found',data:employees})
+    getUsers = async (req, res, next) => {
+        const type = req.path.split('/').pop().replace('s', '');
+        const emps = await userService.findUsers({ type });
+        if (!emps || emps.length < 1) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} Found`));
+        const employees = emps.map((o) => new UserDto(o));
+        res.json({ success: true, message: `${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} List Found`, data: employees })
     }
 
 
-    getUser = async (req,res,next) =>
-    {
-        const {id} = req.params;
-        const type = req.path.replace(id,'').replace('/','').replace('/','');
-        if(!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest(`Invalid ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ','')} Id`));
-        const emp = await userService.findUser({_id:id,type});
-        if(!emp) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ','')} Found`));
-        res.json({success:true,message:'Employee Found',data:new UserDto(emp)})
+    getFreeEmployees = async (req, res, next) => {
+        const emps = await userService.findUsers({ type: 'employee', team: null });
+        if (!emps || emps.length < 1) return next(ErrorHandler.notFound(`No Free Employee Found`));
+        const employees = emps.map((o) => new UserDto(o));
+        res.json({ success: true, message: 'Free Employees List Found', data: employees })
     }
 
-    getUserNoFilter = async (req,res,next) =>
-    {
-        const {id} = req.params;
-        if(!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid User Id'));
-        const emp = await userService.findUser({_id:id});
-        if(!emp) return next(ErrorHandler.notFound('No User Found'));
-        res.json({success:true,message:'User Found',data:new UserDto(emp)})
+
+    getUser = async (req, res, next) => {
+        const { id } = req.params;
+        const type = req.path.replace(id, '').replace('/', '').replace('/', '');
+        if (!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest(`Invalid ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} Id`));
+        const emp = await userService.findUser({ _id: id, type });
+        if (!emp) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase() + type.slice(1).replace(' ', '')} Found`));
+        res.json({ success: true, message: 'Employee Found', data: new UserDto(emp) })
     }
 
-    getLeaders = async (req,res,next) =>
-    {
+    getUserNoFilter = async (req, res, next) => {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return next(ErrorHandler.badRequest('Invalid User Id'));
+        const emp = await userService.findUser({ _id: id });
+        if (!emp) return next(ErrorHandler.notFound('No User Found'));
+        res.json({ success: true, message: 'User Found', data: new UserDto(emp) })
+    }
+
+    getLeaders = async (req, res, next) => {
         const leaders = await userService.findLeaders();
-        const data = leaders.map((o)=>new UserDto(o));
-        res.json({success:true,message:'Leaders Found',data})
+        const data = leaders.map((o) => new UserDto(o));
+        res.json({ success: true, message: 'Leaders Found', data })
     }
 
-    getFreeLeaders = async (req,res,next) =>
-    {
+    getFreeLeaders = async (req, res, next) => {
         const leaders = await userService.findFreeLeaders();
-        const data = leaders.map((o)=>new UserDto(o));
-        res.json({success:true,message:'Free Leaders Found',data})
+        const data = leaders.map((o) => new UserDto(o));
+        res.json({ success: true, message: 'Free Leaders Found', data })
     }
 
-    markEmployeeAttendance = async (req,res,next) => {
+    markEmployeeAttendance = async (req, res, next) => {
         try {
-        const {employeeID} = req.body;
-        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const d = new Date();
+            const { employeeID } = req.body;
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const d = new Date();
 
-        // const {_id} = employee;
-        
-        const newAttendance = {
-            employeeID,
-            year:d.getFullYear(),
-            month:d.getMonth() + 1,
-            date:d.getDate(),
-            day:days[d.getDay()],
-            present: true, 
-        };
+            // const {_id} = employee;
 
-       const isAttendanceMarked = await attendanceService.findAttendance(newAttendance);
-       if(isAttendanceMarked) return next(ErrorHandler.notAllowed(d.toLocaleDateString() +" "+ days[d.getDay()-1]+" "+"Attendance Already Marked!"));
+            const newAttendance = {
+                employeeID,
+                year: d.getFullYear(),
+                month: d.getMonth() + 1,
+                date: d.getDate(),
+                day: days[d.getDay()],
+                present: true,
+            };
 
-       const resp = await attendanceService.markAttendance(newAttendance);
-       console.log(resp);
-       if(!resp) return next(ErrorHandler.serverError('Failed to mark attendance'));
+            const isAttendanceMarked = await attendanceService.findAttendance(newAttendance);
+            if (isAttendanceMarked) return next(ErrorHandler.notAllowed(d.toLocaleDateString() + " " + days[d.getDay() - 1] + " " + "Attendance Already Marked!"));
 
-       const msg = d.toLocaleDateString() +" "+ days[d.getDay()]+" "+ "Attendance Marked!";
-       
-       res.json({success:true,newAttendance,message:msg});
-            
+            const resp = await attendanceService.markAttendance(newAttendance);
+            console.log(resp);
+            if (!resp) return next(ErrorHandler.serverError('Failed to mark attendance'));
+
+            const msg = d.toLocaleDateString() + " " + days[d.getDay()] + " " + "Attendance Marked!";
+
+            res.json({ success: true, newAttendance, message: msg });
+
         } catch (error) {
-            res.json({success:false,error});    
-        } 
+            res.json({ success: false, error });
+        }
     }
 
-    viewEmployeeAttendance = async (req,res,next) => {
+    viewEmployeeAttendance = async (req, res, next) => {
         try {
             const data = req.body;
             const resp = await attendanceService.findAllAttendance(data);
-            if(!resp) return next(ErrorHandler.notFound('No Attendance found'));
+            if (!resp) return next(ErrorHandler.notFound('No Attendance found'));
 
-            res.json({success:true,data:resp});
-            
+            res.json({ success: true, data: resp });
+
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 
@@ -203,22 +285,22 @@ class UserController {
                 type,
                 startDate,
                 endDate,
-                appliedDate, 
-                period, 
-                reason, 
-                adminResponse:"Pending"
+                appliedDate,
+                period,
+                reason,
+                adminResponse: "Pending"
             };
 
-            const isLeaveApplied = await userService.findLeaveApplication({applicantID,startDate,endDate,appliedDate});
-            if(isLeaveApplied) return next(ErrorHandler.notAllowed('Leave Already Applied'));
+            const isLeaveApplied = await userService.findLeaveApplication({ applicantID, startDate, endDate, appliedDate });
+            if (isLeaveApplied) return next(ErrorHandler.notAllowed('Leave Already Applied'));
 
             const resp = await userService.createLeaveApplication(newLeaveApplication);
-            if(!resp) return next(ErrorHandler.serverError('Failed to apply leave'));
+            if (!resp) return next(ErrorHandler.serverError('Failed to apply leave'));
 
-            res.json({success:true,data:resp});
+            res.json({ success: true, data: resp });
 
         } catch (error) {
-            res.json({success:false,error});   
+            res.json({ success: false, error });
         }
     }
 
@@ -226,27 +308,27 @@ class UserController {
         try {
             const data = req.body;
             const resp = await userService.findAllLeaveApplications(data);
-            if(!resp) return next(ErrorHandler.notFound('No Leave Applications found'));
+            if (!resp) return next(ErrorHandler.notFound('No Leave Applications found'));
 
-            res.json({success:true,data:resp});
+            res.json({ success: true, data: resp });
 
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 
     updateLeaveApplication = async (req, res, next) => {
         try {
 
-            const {id} = req.params;
+            const { id } = req.params;
             const body = req.body;
-            const isLeaveUpdated = await userService.updateLeaveApplication(id,body);
-            if(!isLeaveUpdated) return next(ErrorHandler.serverError('Failed to update leave'));
-            res.json({success:true,message:'Leave Updated'});
-            
-            
+            const isLeaveUpdated = await userService.updateLeaveApplication(id, body);
+            if (!isLeaveUpdated) return next(ErrorHandler.serverError('Failed to update leave'));
+            res.json({ success: true, message: 'Leave Updated' });
+
+
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 
@@ -254,46 +336,46 @@ class UserController {
         try {
             const data = req.body;
             const obj = {
-                "employeeID":data.employeeID
+                "employeeID": data.employeeID
             }
             const isSalaryAssigned = await userService.findSalary(obj);
-            if(isSalaryAssigned) return next(ErrorHandler.serverError('Salary already assigned'));
+            if (isSalaryAssigned) return next(ErrorHandler.serverError('Salary already assigned'));
 
             const d = new Date();
-            data["assignedDate"] = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+            data["assignedDate"] = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
             const resp = await userService.assignSalary(data);
-            if(!resp) return next(ErrorHandler.serverError('Failed to assign salary'));
-            res.json({success:true,data:resp}); 
+            if (!resp) return next(ErrorHandler.serverError('Failed to assign salary'));
+            res.json({ success: true, data: resp });
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 
-    updateEmployeeSalary = async (req,res,next) => {
+    updateEmployeeSalary = async (req, res, next) => {
         try {
             const body = req.body;
-            const {employeeID} = body;
+            const { employeeID } = body;
             const d = new Date();
-            body["assignedDate"] = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
-            const isSalaryUpdated = await userService.updateSalary({employeeID},body);
+            body["assignedDate"] = d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+            const isSalaryUpdated = await userService.updateSalary({ employeeID }, body);
             console.log(isSalaryUpdated);
-            if(!isSalaryUpdated) return next(ErrorHandler.serverError('Failed to update salary'));
-            res.json({success:true,message:'Salary Updated'});
-            
+            if (!isSalaryUpdated) return next(ErrorHandler.serverError('Failed to update salary'));
+            res.json({ success: true, message: 'Salary Updated' });
+
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 
-    viewSalary = async (req,res,next) => {
+    viewSalary = async (req, res, next) => {
         try {
             const data = req.body;
             const resp = await userService.findAllSalary(data);
-            if(!resp) return next(ErrorHandler.notFound('No Salary Found'));
-            res.json({success:true,data:resp});
+            if (!resp) return next(ErrorHandler.notFound('No Salary Found'));
+            res.json({ success: true, data: resp });
 
         } catch (error) {
-            res.json({success:false,error});
+            res.json({ success: false, error });
         }
     }
 }

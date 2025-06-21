@@ -1,50 +1,22 @@
-const multer = require('multer');
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("cloudinary").v2;
 
-const storageEngine = multer.diskStorage({
-    destination:(req,file,cb) =>
-    {
-        console.log('Multer Storage Engine');
-        if(file.fieldname==='profile')
-            cb(null,'./storage/images/profile/')
-        else if(file.fieldname==='image')
-            cb(null,'./storage/images/teams');
-        else
-            cb(null,false);
-    },
-    filename:(req,file,cb)=>
-    {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + "-" + uniqueSuffix + file.originalname);
-    }
-})
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "user-profiles",  // ✅ you can change folder name
+    allowed_formats: ["jpg", "png", "jpeg"],
+    public_id: (req, file) => `${Date.now()}-${file.originalname}`,
+  },
+});
 
-const fileFilter = (req,file,cb) =>{
-    console.log('File Filter Method Called');
-    console.log('Logging File '+file);
-    if(file === 'undefined')
-    {
-        console.log('undefined hai')
-        cb(null,false);
-    }
-    else if(file.fieldname==='image')
-    {
-        if(file.mimetype === 'image/png' || file.mimetype === 'image/jpg' ||file.mimetype === 'image/jpeg')
-            cb(null,true)
-        else
-            cb(null,false)
-    }
-    else if(file.fieldname==='video')
-    {
-        if(file.mimetype==='video/mp4')
-            cb(null,true)
-        else
-            cb(null,false)
-    }
-    else
-        cb(null,false);
-}
+const upload = multer({ storage });
 
-
-const upload = multer({storage:storageEngine});
 module.exports = upload;

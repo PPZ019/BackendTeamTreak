@@ -1,19 +1,62 @@
-const tokenService = require('../services/token-service');
-const userService = require('../services/user-service');
-const ErrorHandler = require('../utils/error-handler');
-const {TokenExpiredError} = require('jsonwebtoken');
+const tokenService  = require('../services/token-service');
+const userService   = require('../services/user-service');
+const ErrorHandler  = require('../utils/error-handler');
+const { TokenExpiredError } = require('jsonwebtoken');
 
-const auth = async (req,res,next) =>
-{
-    const {accessToken:accessTokenFromCookie,refreshToken:refreshTokenFromCookie}  = req.cookies;
-    try{
-        if(!accessTokenFromCookie)
-            return next(ErrorHandler.unAuthorized())
-        const userData = await tokenService.verifyAccessToken(accessTokenFromCookie);
-        if(!userData)
-            throw new Error(ErrorHandler.unAuthorized());
-        req.user= userData;
+const auth = async (req, res, next) => {
+  try {
+    const { accessToken, refreshToken } = req.cookies;
+    if (!accessToken) return next(ErrorHandler.unAuthorized());
+
+    /* ─── Verify Access Token ─── */
+    let userData = await tokenService.verifyAccessToken(accessToken);
+
+    /* ─── If expired, try refresh flow ─── */
+    if (!userData) throw new TokenExpiredError('jwt expired');
+
+    req.user = userData;
+    return next();                       // ✅ success – exit here
+  } catch (err) {
+    /* ─── Handle expired access token ─── */
+    if (err instanceof TokenExpiredError) {
+      const { refreshToken } = req.cookies;
+      if (!refreshToken) return next(ErrorHandler.unAuthorized());
+
+      try {
+        const userData = await tokenService.verifyRefreshToken(refreshToken);
+        const { _id, email, username, type } = userData;
+
+        const tokenInDB = await tokenService.findRefreshToken(_id, refreshToken);
+        if (!tokenInDB) return next(ErrorHandler.unAuthorized());
+
+        /* new tokens */
+        const payload = { _id, email, username, type };
+        const { accessToken: newAT, refreshToken: newRT } = tokenService.generateToken(payload);
+        await tokenService.updateRefreshToken(_id, refreshToken, newRT);
+
+        /* set cookies */
+        res.cookie('accessToken', newAT, {
+          httpOnly: true,
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
+        res.cookie('refreshToken', newRT, {
+          maxAge: 30 * 24 * 60 * 60 * 1000,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
+
+        const user = await userService.findUser({ email });
+        if (user.status !== 'active') return next(ErrorHandler.unAuthorized('Account problem'));
+
+        req.user = user;
+        return next();                   // ✅ refreshed – exit
+      } catch (refreshErr) {
+        return next(ErrorHandler.unAuthorized());
+      }
     }
+<<<<<<< Updated upstream
     catch(e)
     {
         console.log('Token Error');
@@ -54,19 +97,24 @@ const auth = async (req,res,next) =>
     }
     next();
 }
+=======
+    /* any other error */
+    return next(ErrorHandler.unAuthorized());
+  }
+};
+>>>>>>> Stashed changes
 
-const authRole = (role) =>
-{
-    return (req,res,next)=>
-    {
-        if(!role.includes(req.user.type))
-            return next(ErrorHandler.notAllowed());
-        next();
-    }
-}
+/* ───────────────────────────────────── */
 
+const authRole = (roles = []) => (req, res, next) => {
+  // normalise casing for safe compare
+  const allowed = roles.map((r) => r.toLowerCase());
+  const userRole = (req.user?.type || '').toLowerCase();
 
-module.exports ={
-    auth,
-    authRole
-}
+  if (!allowed.includes(userRole))
+    return next(ErrorHandler.notAllowed()); // 403
+
+  next();
+};
+
+module.exports = { auth, authRole };

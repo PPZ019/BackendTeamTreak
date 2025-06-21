@@ -1,40 +1,19 @@
-class ErrorHandler extends Error{
+// middlewares/error-middleware.js
+module.exports = (err, req, res, next) => {
+  // हमेशा console पर पूरा error दिखाओ (debug के लिए)
+  console.error('💥', err);
 
-    constructor(message,statusCode)
-    {
-        super(message);
-        this.statusCode = statusCode;
-        Error.captureStackTrace(this,this.constructor)
-    }
+  // ErrorHandler instance में statusCode होगा; वरना 500 fallback
+  const status = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
 
+  // अगर headers भेज चुके हैं तो Express default handler को जाने दो
+  if (res.headersSent) {
+    return next(err);
+  }
 
-    static serverError = (message='Something Went Wrong') =>
-    {
-       return new ErrorHandler(message,500);
-    }
-
-
-    static badRequest = (message='Bad Request') =>
-    {
-       return new ErrorHandler(message,400);
-    }
-
-    static notFound = (message='Resourse Not Found') =>
-    {
-        return new ErrorHandler(message,404);
-    }
-
-    static unAuthorized = (message='Unauthorized Access')=>
-    {
-        return new ErrorHandler(message,401);
-    }
-    
-    static notAllowed = (message='Not Allowed')=>
-    {
-        return new ErrorHandler(message,403);
-    }
-
-
-}
-
-module.exports = ErrorHandler;
+  res.status(status).json({
+    success: false,
+    message,
+  });
+};
