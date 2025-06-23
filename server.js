@@ -57,12 +57,15 @@ app.use("/api", companyRoutes);
 app.use("/api", holidayRoutes);
 app.use("/api/salary", salaryRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/roles", roleRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/performance", performanceRoute);
+const path = require('path');
 
 
-// Routes
 
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ✅ Static Files
 app.use('/storage', express.static('storage'));

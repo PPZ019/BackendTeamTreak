@@ -7,7 +7,7 @@ const uploadDocument = async (req, res) => {
     }
 
     const { documentType } = req.body;
-    const employeeId = req.employeeId;
+    const employeeId = req.user._id; 
 
     const doc = new Document({
       employeeId,
@@ -28,6 +28,8 @@ const uploadDocument = async (req, res) => {
     res.status(500).json({ message: 'Upload failed on server' });
   }
 };
+
+
 
 module.exports = { uploadDocument };
 
