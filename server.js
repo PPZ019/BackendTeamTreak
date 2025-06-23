@@ -19,6 +19,8 @@ const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const { auth, authRole } = require('./middlewares/auth-middleware');
 const announcementRoutes = require('./routes/announcementRoutes');
+const roleRoutes = require('./routes/RoleRoutes');
+const performanceRoute = require('./routes/performance-routes');
 const documentRoutes = require('./routes/documentRoutes');
 
 
@@ -46,7 +48,7 @@ app.use(cookieParser());
 
 // ✅ Routes
 app.use('/api/auth', authRoute);
-app.use('/api/admin', auth, authRole(['admin']), adminRoute);
+app.use('/api/admin', auth, authRole(['admin', 'client']), adminRoute);
 app.use('/api/employee', auth, authRole(['employee', 'leader']), employeeRoute);
 app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
 app.use('/api/chat', chatRoute); // ✅ AI chat route
