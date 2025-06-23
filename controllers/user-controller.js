@@ -9,7 +9,6 @@ const attendanceService = require('../services/attendance-service');
 
 class UserController {
 
-<<<<<<< Updated upstream
     createUser = async (req,res,next) =>
     {
         const file = req.file;
@@ -30,39 +29,6 @@ class UserController {
         const user = {
             name,email,username,mobile,password,type,address,image:file.filename
         }
-=======
-
-    createInitialAdmin = async (req, res, next) => {
-        const existing = await userService.findUser({ email: 'admin@example.com' });
-        if (existing) {
-            console.log('✅ Admin already exists');
-            return;
-        }
-
-        const username = 'admin' + crypto.randomInt(11111111, 999999999);
-        const password = await userService.hashPassword('admin123');
-
-        const user = {
-            name: 'Super Admin',
-            email: 'admin@example.com',
-            username,
-            password,
-            type: 'admin',
-            address: 'Default HQ',
-            mobile: '9999999999',
-            image: 'default.png',
-        };
-
-        const userResp = await userService.createUser(user);
-        if (userResp) {
-            console.log('✅ Initial Admin Created');
-        } else {
-            console.log('❌ Failed to create initial admin');
-        }
-    };
-
-
->>>>>>> Stashed changes
 
 
 
@@ -379,5 +345,5 @@ class UserController {
         }
     }
 }
-
+}
 module.exports = new UserController();

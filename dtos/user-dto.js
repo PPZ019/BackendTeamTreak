@@ -1,10 +1,5 @@
 const TeamDto = require('./team-dto');
-<<<<<<< Updated upstream
 class UserDto{
-=======
-
-class UserDto {
->>>>>>> Stashed changes
     id;
     name;
     email;
@@ -15,7 +10,6 @@ class UserDto {
     address;
     status;
     team;
-<<<<<<< Updated upstream
     constructor(user)
     {
         this.id = user._id,
@@ -29,8 +23,6 @@ class UserDto {
         this.status = user.status && user.status.charAt(0).toUpperCase()+user.status.slice(1),
         this.team = user.team && new TeamDto(Array.isArray(user.team) && user.team.length>0 ? user.team[0] : user.team);
     }
-=======
->>>>>>> Stashed changes
 
     constructor(user) {
         this.id = user._id;
