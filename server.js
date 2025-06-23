@@ -19,6 +19,9 @@ const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const { auth, authRole } = require('./middlewares/auth-middleware');
 const announcementRoutes = require('./routes/announcementRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+
+
 
 const app = express();
 
@@ -52,6 +55,7 @@ app.use("/api", companyRoutes);
 app.use("/api", holidayRoutes);
 app.use("/api/salary", salaryRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/documents", documentRoutes);
 
 
 // Routes
