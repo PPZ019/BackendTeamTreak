@@ -56,8 +56,7 @@ const auth = async (req, res, next) => {
         return next(ErrorHandler.unAuthorized());
       }
     }
-<<<<<<< Updated upstream
-    catch(e)
+
     {
         console.log('Token Error');
         if(e instanceof TokenExpiredError)
@@ -97,14 +96,9 @@ const auth = async (req, res, next) => {
     }
     next();
 }
-=======
-    /* any other error */
-    return next(ErrorHandler.unAuthorized());
-  }
-};
->>>>>>> Stashed changes
 
-/* ───────────────────────────────────── */
+};
+
 
 const authRole = (roles = []) => (req, res, next) => {
   // normalise casing for safe compare

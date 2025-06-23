@@ -4,7 +4,6 @@ const teamController = require('../controllers/team-controller');
 const upload = require('../services/file-upload-service'); // ✅ updated
 const asyncMiddleware = require('../middlewares/async-middleware');
 
-<<<<<<< Updated upstream
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
 router.patch('/user/:id',upload.single('profile'),asyncMiddleware(userController.updateUser));      // Update User
 router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees
@@ -32,12 +31,6 @@ router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmplo
 router.post('/update-employee-salary/',asyncMiddleware(userController.updateEmployeeSalary));
 router.post('/view-all-salary',asyncMiddleware(userController.viewSalary));
 router.post('/update-leave/:id',asyncMiddleware(userController.updateLeaveApplication));
-=======
-// User Routes
-router.get('/create-initial-admin', userController.createInitialAdmin);
-router.post('/user', upload.single('profile'), asyncMiddleware(userController.createUser)); // ✅ updated: field is 'image'
-router.patch('/user/:id', upload.single('profile'), asyncMiddleware(userController.updateUser));
->>>>>>> Stashed changes
 
 // View & Manage Users
 router.get('/employees', asyncMiddleware(userController.getUsers));
