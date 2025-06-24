@@ -24,4 +24,15 @@ router.get("/all", async (req, res) => {
   }
 });
 
+// DELETE a role
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    await Role.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Role deleted" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 module.exports = router;

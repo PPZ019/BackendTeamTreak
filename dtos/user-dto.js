@@ -10,9 +10,14 @@ class UserDto {
     address;
     status;
     team;
+    company;
+    
     constructor(user) {
         this._id = user._id; // ✅ Add this line
-        this.id = user._id; 
+        this.company = user.company && {
+            _id: user.company._id,
+            name: user.company.name
+          };
             this.name = user.name,
             this.username = user.username,
             this.email = user.email,

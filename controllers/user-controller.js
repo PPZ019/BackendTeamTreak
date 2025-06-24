@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const teamService = require('../services/team-service');
 const attendanceService = require('../services/attendance-service');
 const crypto = require('crypto');
+const User = require('../models/user-model');
 
 class UserController {
 
@@ -43,38 +44,60 @@ class UserController {
     
 
 
-    createUser = async (req,res,next) =>
-    {
-        const file = req.file;
-        let {name,email,password,type, address, mobile} = req.body;
-        const username = 'user'+crypto.randomInt(11111111,999999999);
-        if(!name || !email || !username || !password || !type || !address || !file || !mobile) return next(ErrorHandler.badRequest('All Fields Required'));
-        type = type.toLowerCase();
-        if(type==='admin')
-        {
-            const adminPassword = req.body.adminPassword;
-            if(!adminPassword)
-                return next(ErrorHandler.badRequest(`Please Enter Your Password to Add ${name} as an Admin`));
-            const {_id} = req.user;
-            const {password:hashPassword} = await userService.findUser({_id});
-            const isPasswordValid = await userService.verifyPassword(adminPassword,hashPassword);
-            if(!isPasswordValid) return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
+ createUser = async (req, res, next) => {
+        try {
+          const file = req.file;
+          let { name, email, password, type, address, mobile, adminPassword } = req.body;
+          const username = 'user' + crypto.randomInt(11111111, 999999999);
+      
+          if (!name || !email || !username || !password || !type || !address || !file || !mobile) {
+            return next(ErrorHandler.badRequest('All Fields Required'));
+          }
+      
+          type = type.toLowerCase();
+      
+          // If trying to add Admin, verify adminPassword
+          if (type === 'admin') {
+            if (!adminPassword) {
+              return next(ErrorHandler.badRequest(`Please Enter Your Password to Add ${name} as an Admin`));
+            }
+      
+            const { _id } = req.user;
+            const { password: hashPassword } = await userService.findUser({ _id });
+            const isPasswordValid = await userService.verifyPassword(adminPassword, hashPassword);
+            if (!isPasswordValid) {
+              return next(ErrorHandler.unAuthorized('You have entered a wrong password'));
+            }
+          }
+      
+          // Create user object
+          const user = {
+            name,
+            email,
+            username,
+            mobile,
+            password,
+            type,
+            address,
+            image: file.filename,
+            company: req.user.type === 'admin' ? req.body.company : req.user.company
+          };
+      
+          const userResp = await userService.createUser(user);
+          if (!userResp) {
+            return next(ErrorHandler.serverError('Failed To Create An Account'));
+          }
+      
+          return res.json({
+            success: true,
+            message: 'User has been Added',
+            user: new UserDto(userResp) // send created user (DTO)
+          });
+      
+        } catch (err) {
+          next(err);
         }
-        const user = {
-            name,email,username,mobile,password,type,address,image:file.filename
-        }
-
-        
-        // console.log("Hello! I am here in create user");
-        // console.log(user)
-        
-        const userResp = await userService.createUser(user);
-       
-        
-
-        if(!userResp) return next(ErrorHandler.serverError('Failed To Create An Account'));
-        res.json({success:true,message:'User has been Added',user:new UserDto(user)});
-    }
+      };
 
     updateUser = async (req,res,next) =>
     {
@@ -129,14 +152,29 @@ class UserController {
         res.json({success:true,message:'Account Updated'});
     }
 
-    getUsers = async (req,res,next) =>
-    {
-        const type = req.path.split('/').pop().replace('s','');
-        const emps = await userService.findUsers({type});
-        if(!emps || emps.length<1) return next(ErrorHandler.notFound(`No ${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} Found`));
-        const employees = emps.map((o)=> new UserDto(o));
-        res.json({success:true,message:`${type.charAt(0).toUpperCase()+type.slice(1).replace(' ','')} List Found`,data:employees})
-    }
+    getUsers = async (req, res) => {
+        try {
+          const { type, company } = req.user;
+      
+          const filter = { type: "employee" };
+      
+          // 🧠 If client, restrict to same company
+          if (type === "client") {
+            if (!company) {
+              return res.status(403).json({ success: false, message: "Company not assigned" });
+            }
+            filter.company = company;
+          }
+      
+          const employees = await User.find(filter)
+            .populate("company", "name") // optional: populate company name
+            .select("-password"); // don't send password
+      
+          res.json({ success: true, employees });
+        } catch (err) {
+          res.status(500).json({ success: false, message: err.message });
+        }
+      }
 
 
     getFreeEmployees = async (req,res,next) =>

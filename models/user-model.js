@@ -68,7 +68,11 @@ const userSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Company"
       },      
-      role: { type: mongoose.Schema.Types.ObjectId, ref: "Role" },
+      role: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Role",
+        default: null
+      }
 },{
     timestamps:true
 });

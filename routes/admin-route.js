@@ -1,3 +1,5 @@
+const { auth } = require('../middlewares/auth-middleware');
+
 const router = require('express').Router();
 const userController = require('../controllers/user-controller');
 const teamController = require('../controllers/team-controller');
@@ -7,7 +9,7 @@ const asyncMiddleware = require('../middlewares/async-middleware');
 router.get('/create-initial-admin', userController.createInitialAdmin);
 router.post('/user',upload.single('profile'),asyncMiddleware(userController.createUser));           // Create User
 router.patch('/user/:id',upload.single('profile'),asyncMiddleware(userController.updateUser));      // Update User
-router.get('/employees',asyncMiddleware(userController.getUsers));                                  // Employees
+router.get('/employees',auth, asyncMiddleware(userController.getUsers));                                  // Employees
 router.get('/employees/free',asyncMiddleware(userController.getFreeEmployees));                     // Free Employees
 router.get('/employee/:id',asyncMiddleware(userController.getUser));                                // Employee
 router.get('/user/:id',asyncMiddleware(userController.getUserNoFilter));                            // User - No Filter (Admin,Leader,Employee)
