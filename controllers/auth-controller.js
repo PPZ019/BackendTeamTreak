@@ -86,7 +86,7 @@ class AuthController {
         const response = await tokenService.removeRefreshToken(_id,refreshToken);
         res.clearCookie('refreshToken');
         res.clearCookie('accessToken');
-        return (response.modifiedCount===1) ? res.json({success:true,message:'Logout Successfully'}) : next(ErrorHandler.unAuthorized());
+        return (response.modifiedCount===1) ? res.json({success:true,message:'Logout Successfully'}) : next(ErrorHandler.unauthorized());
     }
 
     refresh = async (req, res, next) => {
@@ -94,7 +94,7 @@ class AuthController {
 
     if (!refreshTokenFromCookie) {
         console.log('❌ No refresh token in cookies');
-        return next(ErrorHandler.unAuthorized());
+        return next(ErrorHandler.unauthorized());
     }
 
     let userData;
@@ -102,7 +102,7 @@ class AuthController {
         userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
     } catch (err) {
         console.log('❌ Invalid refresh token', err.message);
-        return next(ErrorHandler.unAuthorized());
+        return next(ErrorHandler.unauthorized());
     }
 
     const { _id, email, username, type } = userData;

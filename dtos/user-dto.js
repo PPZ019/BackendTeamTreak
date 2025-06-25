@@ -21,9 +21,13 @@ class UserDto {
         this.username = user.username || '';
         this.email = user.email || '';
         this.mobile = user.mobile || '';
-        this.image = user.image
-          ? `${process.env.BASE_URL}storage/images/profile/${encodeURIComponent(user.image)}`
-          : null;
+        if (user.image?.startsWith('http')) {
+          this.image = user.image;
+      } else if (user.image) {
+          this.image = `${process.env.BASE_URL}storage/images/profile/${encodeURIComponent(user.image)}`;
+      } else {
+          this.image = null;
+      }
         this.type = user.type ? capitalize(user.type) : '';
         this.address = user.address || '';
         this.status = user.status ? capitalize(user.status) : '';
@@ -40,3 +44,5 @@ class UserDto {
 }
 
 module.exports = UserDto;
+
+

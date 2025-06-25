@@ -2,8 +2,9 @@ const router = require('express').Router();
 const asyncMiddleware = require('../middlewares/async-middleware');
 const userController = require('../controllers/user-controller');
 const teamController = require('../controllers/team-controller');
-const upload = require('../services/file-upload-service');
+const upload = require('../configs/cloudinaryConfigure');
 
+console.log(upload)
 router.patch('/user',upload.single('profile'),asyncMiddleware(userController.updateUser));  // Update Self Account
 router.get('/team/:id',asyncMiddleware(teamController.getTeam));
 router.get('/team/:id/members',asyncMiddleware(teamController.getTeamMembers)); 

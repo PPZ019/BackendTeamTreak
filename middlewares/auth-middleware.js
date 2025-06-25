@@ -19,14 +19,18 @@ const auth = async (req, res, next) => {
       console.log("Invalid access token");
       return next(ErrorHandler.unAuthorized());
     }
+
     const user = await userService.findUser({ _id: userData._id }).populate("company");
-    if (!user) return next(ErrorHandler.unAuthorized());
+    if (!user || user.status !== 'active') {
+      return next(ErrorHandler.unAuthorized('There is a problem with your account, Please contact to the admin'));
+    }
 
     req.user = {
       _id: user._id,
       email: user.email,
+      username: user.username,
       type: user.type,
-      company: user.company ? user.company._id || user.company : undefined, 
+      company: user.company ? user.company._id || user.company : undefined,
     };
     console.log("Authenticated:", req.user);
     return next();
@@ -38,48 +42,56 @@ const auth = async (req, res, next) => {
 
       if (!refreshTokenFromCookie) return next(ErrorHandler.unAuthorized());
 
-      const userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
-      const { _id } = userData;
+      try {
+        const userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
+        const { _id } = userData;
 
-      const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
-      if (!token) return next(ErrorHandler.unAuthorized());
+        const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
+        if (!token) return next(ErrorHandler.unAuthorized());
 
-      const fullUser = await userService.findUser({ _id }).populate("company", "name");
-      if (!fullUser || fullUser.status !== 'active') {
-        return next(ErrorHandler.unAuthorized("There is a problem with your account"));
+        const fullUser = await userService.findUser({ _id }).populate("company", "name");
+        if (!fullUser || fullUser.status !== 'active') {
+          return next(ErrorHandler.unAuthorized('There is a problem with your account, Please contact to the admin'));
+        }
+
+        const payload = {
+          _id: fullUser._id,
+          email: fullUser.email,
+          username: fullUser.username,
+          type: fullUser.type,
+        };
+
+        const { accessToken, refreshToken } = tokenService.generateToken(payload);
+
+        await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
+
+        req.user = {
+          _id: fullUser._id,
+          email: fullUser.email,
+          username: fullUser.username,
+          type: fullUser.type,
+          company: fullUser.company ? fullUser.company._id || fullUser.company : undefined,
+        };
+
+        res.cookie("accessToken", accessToken, {
+          maxAge: 1000 * 60 * 60 * 24 * 30,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: "lax",
+        });
+
+        res.cookie("refreshToken", refreshToken, {
+          maxAge: 1000 * 60 * 60 * 24 * 30,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: "lax",
+        });
+
+        console.log("Refreshed token, user authenticated:", req.user);
+        return next();
+      } catch (refreshErr) {
+        console.log("Refresh token error:", refreshErr.message);
+        return next(ErrorHandler.unAuthorized());
       }
-
-      const payload = {
-        _id: fullUser._id,
-        email: fullUser.email,
-        username: fullUser.username,
-        type: fullUser.type,
-      };
-
-      const { accessToken, refreshToken } = tokenService.generateToken(payload);
-
-      await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
-
-      req.user = {
-        _id: fullUser._id,
-        email: fullUser.email,
-        type: fullUser.type,
-        company: fullUser.company ? fullUser.company._id || fullUser.company : undefined, // ✅ again clean company assignment
-      };
-
-      res.cookie("accessToken", accessToken, {
-        maxAge: 1000 * 60 * 60 * 24 * 30,
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-      });
-
-      res.cookie("refreshToken", refreshToken, {
-        maxAge: 1000 * 60 * 60 * 24 * 30,
-      });
-
-      console.log("Refreshed token, user authenticated:", req.user);
-      return next();
     }
 
     console.log("Final auth failure");
@@ -87,9 +99,12 @@ const auth = async (req, res, next) => {
   }
 };
 
-const authRole = (role) => {
+const authRole = (roles = []) => {
   return (req, res, next) => {
-    if (!role.includes(req.user.type)) {
+    const allowed = roles.map((r) => r.toLowerCase());
+    const userRole = (req.user?.type || '').toLowerCase();
+
+    if (!allowed.includes(userRole)) {
       return next(ErrorHandler.notAllowed());
     }
     next();
