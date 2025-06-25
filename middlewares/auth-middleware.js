@@ -21,10 +21,15 @@ const auth = async (req, res, next) => {
     }
 
     // ✅ Fetch full user with company populated
-    const user = await userService.findUser({ _id: userData._id }).populate("company", "name");
+    const user = await userService.findUser({ _id: userData._id }).populate("company");
     if (!user) return next(ErrorHandler.unAuthorized());
 
-    req.user = user;
+    req.user = {
+      _id: user._id,
+      email: user.email,
+      type: user.type,
+      company: user.company ? user.company._id || user.company : undefined, // ✅ clean company assignment
+    };
     console.log("✅ Authenticated:", req.user);
     return next();
   } catch (e) {
@@ -58,7 +63,12 @@ const auth = async (req, res, next) => {
 
       await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
 
-      req.user = fullUser;
+      req.user = {
+        _id: fullUser._id,
+        email: fullUser.email,
+        type: fullUser.type,
+        company: fullUser.company ? fullUser.company._id || fullUser.company : undefined, // ✅ again clean company assignment
+      };
 
       res.cookie("accessToken", accessToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30,
@@ -69,7 +79,6 @@ const auth = async (req, res, next) => {
 
       res.cookie("refreshToken", refreshToken, {
         maxAge: 1000 * 60 * 60 * 24 * 30,
-        // httpOnly: true,
       });
 
       console.log("✅ Refreshed token, user authenticated:", req.user);

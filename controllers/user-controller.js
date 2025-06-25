@@ -205,12 +205,38 @@ class UserController {
         res.json({success:true,message:'User Found',data:new UserDto(emp)})
     }
 
-    getLeaders = async (req,res,next) =>
-    {
-        const leaders = await userService.findLeaders();
-        const data = leaders.map((o)=>new UserDto(o));
-        res.json({success:true,message:'Leaders Found',data})
-    }
+
+    getLeaders = async (req, res, next) => {
+        try {
+          const { type } = req.user;
+      
+          let filter = { type: "client" }; // ✅ because client == leader
+      
+          // If user is NOT admin, filter by company
+          if (type !== "admin") {
+            if (!req.user.company) {
+              return res.status(403).json({ success: false, message: "Company not assigned." });
+            }
+            filter.company = req.user.company;
+          }
+      
+          const leaders = await userService.findLeaders(filter); // aggregation me team & company join ho rha hai
+          const data = leaders.map((u) => new UserDto(u));
+      
+          res.json({ success: true, message: "Leaders Found", data });
+        } catch (err) {
+          console.error("getLeaders Error:", err);
+          res.status(500).json({ success: false, message: "Server error." });
+        }
+      };
+      
+      
+      
+      
+      
+      
+  
+      
 
     getFreeLeaders = async (req,res,next) =>
     {
@@ -252,18 +278,32 @@ class UserController {
         } 
     }
 
-    viewEmployeeAttendance = async (req,res,next) => {
+    viewEmployeeAttendance = async (req, res, next) => {
         try {
-            const data = req.body;
-            const resp = await attendanceService.findAllAttendance(data);
-            if(!resp) return next(ErrorHandler.notFound('No Attendance found'));
-
-            res.json({success:true,data:resp});
-            
+          const { type, company } = req.user;
+          const filter = { ...req.body };
+      
+          // 🧠 If client, limit to employees of their company
+          if (type === "client") {
+            if (!company) {
+              return res.status(403).json({ success: false, message: "Company not assigned" });
+            }
+            filter.company = company; // this assumes attendance records have a `company` field
+          }
+      
+          const attendanceRecords = await attendanceService.findAllAttendance(filter);
+      
+          if (!attendanceRecords || attendanceRecords.length === 0) {
+            return res.status(404).json({ success: false, message: "No attendance records found." });
+          }
+      
+          res.json({ success: true, data: attendanceRecords });
         } catch (error) {
-            res.json({success:false,error});
+          console.error("Attendance Fetch Error:", error);
+          res.status(500).json({ success: false, message: error.message });
         }
-    }
+      };
+      
 
     applyLeaveApplication = async (req, res, next) => {
         try {

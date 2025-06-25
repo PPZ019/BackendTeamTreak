@@ -25,18 +25,70 @@ class UserService {
 
     updatePassword = async (_id,password) => await UserModel.updateOne({_id},{password});
 
-    findLeaders = async (req,res,next) =>  await UserModel.aggregate([
-    {$match: { "type": 'leader' }},
-    {
-        $lookup:
-        {
-            from: "teams",
-            localField: "_id",
-            foreignField: "leader",
-            as: "team"
-        }
-    }
-    ])
+    findLeaders = async (filter = {}) => {
+        return await UserModel.aggregate([
+          { $match: filter },
+          {
+            $lookup: {
+              from: "teams",
+              localField: "_id",
+              foreignField: "leader",
+              as: "team"
+            }
+          },
+          {
+            $lookup: {
+              from: "companies",
+              localField: "company",
+              foreignField: "_id",
+              as: "company"
+            }
+          },
+          {
+            $unwind: {
+              path: "$company",
+              preserveNullAndEmptyArrays: true
+            }
+          }
+        ]);
+      };
+
+      
+      findAllLeadersWithCompany = async () => {
+        return await UserModel.aggregate([
+          {
+            $match: { type: "leader" }
+          },
+          {
+            $lookup: {
+              from: "companies",               // ✅ collection name in lowercase plural
+              localField: "company",           // ✅ field in user document
+              foreignField: "_id",             // ✅ field in company document
+              as: "company"
+            }
+          },
+          {
+            $unwind: {
+              path: "$company",
+              preserveNullAndEmptyArrays: false // ❌ false => only return users with valid company
+            }
+          },
+          {
+            $lookup: {
+              from: "teams",
+              localField: "_id",
+              foreignField: "leader",
+              as: "team"
+            }
+          }
+        ]);
+      };
+      
+      
+      
+      
+  
+      
 
     findFreeLeaders = async (req,res,next) =>  await UserModel.aggregate([
     {$match: { "type": 'leader' }},
