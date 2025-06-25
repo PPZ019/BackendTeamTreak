@@ -8,16 +8,13 @@ const auth = async (req, res, next) => {
     const { accessToken, refreshToken } = req.cookies;
     if (!accessToken) return next(ErrorHandler.unAuthorized());
 
-    /* ─── Verify Access Token ─── */
     let userData = await tokenService.verifyAccessToken(accessToken);
 
-    /* ─── If expired, try refresh flow ─── */
     if (!userData) throw new TokenExpiredError('jwt expired');
 
     req.user = userData;
-    return next();                       // ✅ success – exit here
+    return next();                       
   } catch (err) {
-    /* ─── Handle expired access token ─── */
     if (err instanceof TokenExpiredError) {
       const { refreshToken } = req.cookies;
       if (!refreshToken) return next(ErrorHandler.unAuthorized());
@@ -29,12 +26,10 @@ const auth = async (req, res, next) => {
         const tokenInDB = await tokenService.findRefreshToken(_id, refreshToken);
         if (!tokenInDB) return next(ErrorHandler.unAuthorized());
 
-        /* new tokens */
         const payload = { _id, email, username, type };
         const { accessToken: newAT, refreshToken: newRT } = tokenService.generateToken(payload);
         await tokenService.updateRefreshToken(_id, refreshToken, newRT);
 
-        /* set cookies */
         res.cookie('accessToken', newAT, {
           httpOnly: true,
           maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -51,7 +46,7 @@ const auth = async (req, res, next) => {
         if (user.status !== 'active') return next(ErrorHandler.unAuthorized('Account problem'));
 
         req.user = user;
-        return next();                   // ✅ refreshed – exit
+        return next();                   
       } catch (refreshErr) {
         return next(ErrorHandler.unAuthorized());
       }
@@ -101,7 +96,6 @@ const auth = async (req, res, next) => {
 
 
 const authRole = (roles = []) => (req, res, next) => {
-  // normalise casing for safe compare
   const allowed = roles.map((r) => r.toLowerCase());
   const userRole = (req.user?.type || '').toLowerCase();
 

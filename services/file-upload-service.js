@@ -11,7 +11,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "user-profiles",  // ✅ you can change folder name
+    folder: "user-profiles",  
     allowed_formats: ["jpg", "png", "jpeg"],
     public_id: (req, file) => `${Date.now()}-${file.originalname}`,
   },
