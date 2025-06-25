@@ -21,5 +21,19 @@ router.post("/company", async (req, res) => {
       res.status(500).json({ success: false, message: err.message });
     }
   });
+
+  router.get("/company/:id", async (req, res) => {
+    try {
+      const company = await Company.findById(req.params.id);
+      if (!company) {
+        return res.status(404).json({ success: false, message: "Company not found" });
+      }
+  
+      res.status(200).json({ success: true, name: company.name, data: company });
+    } catch (err) {
+      console.error("Error fetching company", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  });
   
   module.exports = router;

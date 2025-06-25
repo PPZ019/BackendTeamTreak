@@ -30,24 +30,22 @@ exports.createAnnouncement = async (req, res) => {
 
 
 // 📥 Get All Announcements
+// 📥 Get All Announcements
 exports.getAllAnnouncements = async (req, res) => {
   try {
     const user = req.user;
-    console.log("🔍 Logged in User:", user);
 
-    if (!user) {
-      return res.status(403).json({ success: false, message: "User not found." });
+    if (!user || !user.company) {
+      return res.status(403).json({ success: false, message: "Unauthorized or company not assigned." });
     }
 
-    const { audience } = req.query;
+    const filter = {
+      company: user.company,
+    };
 
-    const filter = {};
-    if (user.company) {
-      filter.company = user.company;
-    }
-
-    if (audience) {
-      filter.audience = audience;
+    // 👇 Audience filter (optional - e.g., only show "all" or "employee" for employee users)
+    if (user.type === "employee") {
+      filter.audience = { $in: ["all", "employee"] };
     }
 
     const announcements = await Announcement.find(filter).sort({ createdAt: -1 });
@@ -58,6 +56,7 @@ exports.getAllAnnouncements = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error." });
   }
 };
+
 
 
 
