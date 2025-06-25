@@ -4,7 +4,6 @@ const PORT = process.env.PORT || 5500;
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const dbConnection = require('./configs/db-config');
-
 const authRoute = require('./routes/auth-route');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const adminRoute = require('./routes/admin-route');
@@ -14,7 +13,7 @@ const chatRoute = require('./routes/chat-route');
 const companyRoutes = require('./routes/company-routes'); 
 const holidayRoutes = require('./routes/holiday-routes'); 
 const salaryRoutes = require('./routes/salary-routes'); 
-
+const expenseClaimRoutes = require('./routes/claimRoutes');
 const errorMiddleware = require('./middlewares/error-middleware');
 const ErrorHandler = require('./utils/error-handler');
 const { auth, authRole } = require('./middlewares/auth-middleware');
@@ -51,7 +50,7 @@ app.use('/api/auth', authRoute);
 app.use('/api/admin', auth, authRole(['admin', 'client']), adminRoute);
 app.use('/api/employee', auth, authRole(['employee', 'leader']), employeeRoute);
 app.use('/api/leader', auth, authRole(['leader']), leaderRoute);
-app.use('/api/chat', chatRoute); // ✅ AI chat route
+app.use('/api/chat', chatRoute); 
 app.use('/api/invoice', invoiceRoutes);
 app.use("/api", companyRoutes);
 app.use("/api", holidayRoutes);
@@ -60,6 +59,8 @@ app.use("/api/announcements", announcementRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/performance", performanceRoute);
+app.use('/api/expense', expenseClaimRoutes);
+
 const path = require('path');
 
 

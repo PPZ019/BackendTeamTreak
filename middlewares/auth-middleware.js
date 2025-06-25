@@ -16,11 +16,9 @@ const auth = async (req, res, next) => {
 
     const userData = await tokenService.verifyAccessToken(accessTokenFromCookie);
     if (!userData) {
-      console.log("❌ Invalid access token");
+      console.log("Invalid access token");
       return next(ErrorHandler.unAuthorized());
     }
-
-    // ✅ Fetch full user with company populated
     const user = await userService.findUser({ _id: userData._id }).populate("company");
     if (!user) return next(ErrorHandler.unAuthorized());
 
@@ -28,15 +26,15 @@ const auth = async (req, res, next) => {
       _id: user._id,
       email: user.email,
       type: user.type,
-      company: user.company ? user.company._id || user.company : undefined, // ✅ clean company assignment
+      company: user.company ? user.company._id || user.company : undefined, 
     };
-    console.log("✅ Authenticated:", req.user);
+    console.log("Authenticated:", req.user);
     return next();
   } catch (e) {
-    console.log("⚠️ Token error:", e.message);
+    console.log("Token error:", e.message);
 
     if (e instanceof TokenExpiredError) {
-      console.log("🔁 Trying to refresh token");
+      console.log("Trying to refresh token");
 
       if (!refreshTokenFromCookie) return next(ErrorHandler.unAuthorized());
 
@@ -46,7 +44,6 @@ const auth = async (req, res, next) => {
       const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
       if (!token) return next(ErrorHandler.unAuthorized());
 
-      // ✅ Fetch full user again with company populated
       const fullUser = await userService.findUser({ _id }).populate("company", "name");
       if (!fullUser || fullUser.status !== 'active') {
         return next(ErrorHandler.unAuthorized("There is a problem with your account"));
@@ -81,11 +78,11 @@ const auth = async (req, res, next) => {
         maxAge: 1000 * 60 * 60 * 24 * 30,
       });
 
-      console.log("✅ Refreshed token, user authenticated:", req.user);
+      console.log("Refreshed token, user authenticated:", req.user);
       return next();
     }
 
-    console.log("❌ Final auth failure");
+    console.log("Final auth failure");
     return next(ErrorHandler.unAuthorized());
   }
 };
