@@ -7,7 +7,7 @@ exports.submitClaim = async (req, res) => {
     const receipt = req.file ? `/uploads/${req.file.filename}` : null;
 
     const claim = new ExpenseClaim({
-      employeeId: req.user.id, 
+      employeeId: req.user._id,
       category,
       amount,
       date,
@@ -24,7 +24,7 @@ exports.submitClaim = async (req, res) => {
 
 exports.getMyClaims = async (req, res) => {
   try {
-    const claims = await ExpenseClaim.find({ employeeId: req.user.id }).sort({ createdAt: -1 });
+    const claims = await ExpenseClaim.find({ employeeId: req.user._id }).sort({ createdAt: -1 });
     res.json(claims);
   } catch (err) {
     res.status(500).json({ error: 'Error fetching claims' });

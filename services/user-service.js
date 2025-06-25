@@ -47,11 +47,26 @@ class UserService {
           {
             $unwind: {
               path: "$company",
-              preserveNullAndEmptyArrays: true
+              preserveNullAndEmptyArrays: false 
+            }
+          },
+          {
+            $project: {
+              name: 1,
+              email: 1,
+              username: 1,
+              mobile: 1,
+              image: 1,
+              type: 1,
+              address: 1,
+              status: 1,
+              team: 1,
+              company: { _id: "$company._id", name: "$company.name" }
             }
           }
         ]);
       };
+      
 
       
       findAllLeadersWithCompany = async () => {

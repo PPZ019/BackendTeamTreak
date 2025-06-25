@@ -245,50 +245,65 @@ class UserController {
         res.json({success:true,message:'Free Leaders Found',data})
     }
 
-    markEmployeeAttendance = async (req,res,next) => {
+    markEmployeeAttendance = async (req, res, next) => {
         try {
-        const {employeeID} = req.body;
-        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        const d = new Date();
-
-        // const {_id} = employee;
-        
-        const newAttendance = {
+          const { _id: employeeID, company } = req.user; // ✅ get from authenticated user
+      
+          const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+          const d = new Date();
+      
+          const newAttendance = {
+            employeeID, // ✅ FROM req.user
+            year: d.getFullYear(),
+            month: d.getMonth() + 1,
+            date: d.getDate(),
+            day: days[d.getDay()],
+            present: true,
+            company, // ✅ FROM req.user
+          };
+      
+          // check if already marked
+          const isAttendanceMarked = await attendanceService.findAttendance({
             employeeID,
-            year:d.getFullYear(),
-            month:d.getMonth() + 1,
-            date:d.getDate(),
-            day:days[d.getDay()],
-            present: true, 
-        };
-
-       const isAttendanceMarked = await attendanceService.findAttendance(newAttendance);
-       if(isAttendanceMarked) return next(ErrorHandler.notAllowed(d.toLocaleDateString() +" "+ days[d.getDay()-1]+" "+"Attendance Already Marked!"));
-
-       const resp = await attendanceService.markAttendance(newAttendance);
-       console.log(resp);
-       if(!resp) return next(ErrorHandler.serverError('Failed to mark attendance'));
-
-       const msg = d.toLocaleDateString() +" "+ days[d.getDay()]+" "+ "Attendance Marked!";
-       
-       res.json({success:true,newAttendance,message:msg});
-            
+            year: newAttendance.year,
+            month: newAttendance.month,
+            date: newAttendance.date,
+          });
+      
+          if (isAttendanceMarked)
+            return next(
+              ErrorHandler.notAllowed(
+                d.toLocaleDateString() + " " + days[d.getDay()] + " Attendance Already Marked!"
+              )
+            );
+      
+          const resp = await attendanceService.markAttendance(newAttendance);
+          if (!resp) return next(ErrorHandler.serverError("Failed to mark attendance"));
+      
+          const msg = d.toLocaleDateString() + " " + days[d.getDay()] + " Attendance Marked!";
+          res.json({ success: true, newAttendance, message: msg });
         } catch (error) {
-            res.json({success:false,error});    
-        } 
-    }
-
-    viewEmployeeAttendance = async (req, res, next) => {
+          console.error("❌ Mark Attendance Error:", error);
+          res.status(500).json({ success: false, error });
+        }
+      };
+      
+      viewEmployeeAttendance = async (req, res, next) => {
         try {
-          const { type, company } = req.user;
+          const { type, company, _id: loggedInUserID } = req.user;
           const filter = { ...req.body };
       
-          // 🧠 If client, limit to employees of their company
+          // ✅ If employee — only allow their own data
+          if (type === "employee") {
+            filter.employeeID = loggedInUserID; // forcefully override
+          }
+      
+          // ✅ If client, only data from their company
           if (type === "client") {
             if (!company) {
               return res.status(403).json({ success: false, message: "Company not assigned" });
             }
-            filter.company = company; // this assumes attendance records have a `company` field
+            filter.company = company;
           }
       
           const attendanceRecords = await attendanceService.findAllAttendance(filter);
@@ -304,48 +319,66 @@ class UserController {
         }
       };
       
+      
+      
 
-    applyLeaveApplication = async (req, res, next) => {
+      applyLeaveApplication = async (req, res, next) => {
         try {
-            const data = req.body;
-            const { applicantID, title, type, startDate, endDate, appliedDate, period, reason } = data;
-            const newLeaveApplication = {
-                applicantID,
-                title,
-                type,
-                startDate,
-                endDate,
-                appliedDate, 
-                period, 
-                reason, 
-                adminResponse:"Pending"
-            };
-
-            const isLeaveApplied = await userService.findLeaveApplication({applicantID,startDate,endDate,appliedDate});
-            if(isLeaveApplied) return next(ErrorHandler.notAllowed('Leave Already Applied'));
-
-            const resp = await userService.createLeaveApplication(newLeaveApplication);
-            if(!resp) return next(ErrorHandler.serverError('Failed to apply leave'));
-
-            res.json({success:true,data:resp});
-
+          const data = req.body;
+          const { title, type, startDate, endDate, appliedDate, period, reason } = data;
+          const applicantID = req.user._id;
+          const user = req.user;
+      
+          if (!user || !user.company) {
+            return next(ErrorHandler.notAllowed("Company not assigned to user"));
+          }
+      
+          const newLeaveApplication = {
+            applicantID,
+            title,
+            type,
+            startDate,
+            endDate,
+            appliedDate,
+            period,
+            reason,
+            company: user.company, // ✅ associate leave with user's company
+            adminResponse: "Pending",
+          };
+      
+          const isLeaveApplied = await userService.findLeaveApplication({ applicantID, startDate, endDate, appliedDate });
+          if (isLeaveApplied) return next(ErrorHandler.notAllowed("Leave Already Applied"));
+      
+          const resp = await userService.createLeaveApplication(newLeaveApplication);
+          if (!resp) return next(ErrorHandler.serverError("Failed to apply leave"));
+      
+          res.json({ success: true, data: resp });
         } catch (error) {
-            res.json({success:false,error});   
+          res.status(500).json({ success: false, message: error.message || "Server error" });
         }
-    }
+      };
+      
+      
 
-    viewLeaveApplications = async (req, res, next) => {
+      viewLeaveApplications = async (req, res, next) => {
         try {
-            const data = req.body;
-            const resp = await userService.findAllLeaveApplications(data);
-            if(!resp) return next(ErrorHandler.notFound('No Leave Applications found'));
-
-            res.json({success:true,data:resp});
-
+          const filters = req.body || {};
+          const user = req.user;
+      
+          if (!user) return next(ErrorHandler.unauthorized("Unauthorized access"));
+      
+          filters.applicantID = user._id; 
+      
+          const resp = await userService.findAllLeaveApplications(filters);
+          if (!resp || resp.length === 0) return next(ErrorHandler.notFound('No Leave Applications found'));
+      
+          res.json({ success: true, data: resp });
+      
         } catch (error) {
-            res.json({success:false,error});
+          res.status(500).json({ success: false, message: error.message || "Server Error" });
         }
-    }
+      };
+      
 
     updateLeaveApplication = async (req, res, next) => {
         try {

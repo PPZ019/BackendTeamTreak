@@ -8,6 +8,7 @@ const AttendanceSchema = new Schema({
     date: {type: Number, required: true},
     day: {type: String, required: true},
     present: {type: Boolean, required: true},
+    company: { type: Schema.Types.ObjectId, ref: 'Company' }, 
 });
 
 

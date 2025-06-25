@@ -12,6 +12,11 @@ const LeaveSchema = new Schema({
     period: {type: Number, required: true, min: 1, max: 10},
     reason: {type: String, required: true},
     adminResponse: {type: String, default: 'N/A'},
+    company: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company",
+        required: true,
+      },
 
 });
 

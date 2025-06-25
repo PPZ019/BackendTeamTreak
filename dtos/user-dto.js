@@ -33,11 +33,8 @@ class UserDto {
           : null;
     
           this.company = user.company
-          ? {
-              _id: user.company._id,
-              name: user.company.name,
-            }
-          : null;
+      ? { _id: user.company._id, name: user.company.name }
+      : null;
       }
 
 }
