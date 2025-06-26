@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const expenseClaimSchema = new mongoose.Schema({
   employeeId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // ✅ reference to User collection
     required: true,
   },
   category: String,
