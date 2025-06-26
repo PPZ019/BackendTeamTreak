@@ -20,11 +20,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ======================
-     Expense Claim Routes
-=========================*/
-
-// 📤 Submit claim (Employee)
 router.post('/claim', auth, upload.single('receipt'), submitClaim);
 
 // 📄 My claims (Employee)
@@ -34,6 +29,6 @@ router.get('/my-claims', auth, getMyClaims);
 router.get('/admin/all-claims', auth, authRole(['admin', 'client']), getAllClaims);
 
 // 🧑‍💼 Company claims (Leader)
-router.get('/leader/claims', auth, authRole(['leader']), getCompanyClaims);
+router.get('/leader/claims', auth, authRole(['client']), getCompanyClaims);
 
 module.exports = router;

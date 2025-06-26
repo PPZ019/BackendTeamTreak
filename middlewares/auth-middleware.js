@@ -104,12 +104,15 @@ const authRole = (roles = []) => {
     const allowed = roles.map((r) => r.toLowerCase());
     const userRole = (req.user?.type || '').toLowerCase();
 
+    console.log("🔒 Role check:", { userRole, allowed });
+
     if (!allowed.includes(userRole)) {
       return next(ErrorHandler.notAllowed());
     }
     next();
   };
 };
+
 
 module.exports = {
   auth,
