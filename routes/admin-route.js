@@ -32,7 +32,7 @@ router.patch('/team/leader/add',asyncMiddleware(teamController.addRemoveLeader))
 router.patch('/team/leader/remove',asyncMiddleware(teamController.addRemoveLeader));                // Remove Team Leader
 router.get('/counts',asyncMiddleware(teamController.getCounts));                                    // Counts
 router.post('/view-employee-attendance',asyncMiddleware(userController.viewEmployeeAttendance));
-router.post('/view-leave-applications',asyncMiddleware(userController.viewLeaveApplications));
+router.post('/view-leave-applications',asyncMiddleware(userController.viewCompanyLeaveApplications));
 router.post('/assign-employee-salary',asyncMiddleware(userController.assignEmployeeSalary));
 router.post('/update-employee-salary/',asyncMiddleware(userController.updateEmployeeSalary));
 router.post('/view-all-salary',asyncMiddleware(userController.viewSalary));
@@ -63,11 +63,12 @@ router.patch('/team/leader/remove', asyncMiddleware(teamController.addRemoveLead
 
 // Attendance/Leave/Salary
 router.get('/counts', asyncMiddleware(teamController.getCounts));
-router.post('/view-employee-attendance', asyncMiddleware(userController.viewEmployeeAttendance));
+// router.post('/view-employee-attendance', asyncMiddleware(userController.viewEmployeeAttendance));
 router.post('/view-leave-applications', asyncMiddleware(userController.viewLeaveApplications));
 router.post('/assign-employee-salary', asyncMiddleware(userController.assignEmployeeSalary));
 router.post('/update-employee-salary', asyncMiddleware(userController.updateEmployeeSalary));
 router.post('/view-all-salary', asyncMiddleware(userController.viewSalary));
 router.post('/update-leave/:id', asyncMiddleware(userController.updateLeaveApplication));
+
 
 module.exports = router;

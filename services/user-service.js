@@ -123,7 +123,12 @@ class UserService {
 
     findLeaveApplication = async (data) => LeaveModel.findOne(data);
 
-    findAllLeaveApplications = async (data) => LeaveModel.find(data);
+     findAllLeaveApplications = async (filters = {}) => {
+      return await LeaveModel.find(filters)
+        .populate('applicantID', 'name email') // ✅ populate only name & email
+        .sort({ appliedDate: -1 });
+    };
+    
 
     assignSalary = async (data) => UserSalaryModel.create(data);
 

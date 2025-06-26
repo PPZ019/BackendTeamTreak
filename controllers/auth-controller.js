@@ -90,58 +90,76 @@ class AuthController {
     }
 
     refresh = async (req, res, next) => {
-    const { refreshToken: refreshTokenFromCookie } = req.cookies;
-
-    if (!refreshTokenFromCookie) {
-        console.log('❌ No refresh token in cookies');
-        return next(ErrorHandler.unauthorized());
-    }
-
-    let userData;
-    try {
-        userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
-    } catch (err) {
-        console.log('❌ Invalid refresh token', err.message);
-        return next(ErrorHandler.unauthorized());
-    }
-
-    const { _id, email, username, type } = userData;
-
-    const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
-    if (!token) {
-        console.log('❌ Refresh token not found in DB');
-        res.clearCookie('refreshToken');
-        res.clearCookie('accessToken');
-        return res.status(401).json({ success: false, message: 'Unauthorized Access' });
-    }
-
-    const user = await userService.findUser({ email });
-    if (user?.status !== 'active') {
-        return next(ErrorHandler.unAuthorized('There is a problem with your account, please contact admin'));
-    }
-
-    const payload = { _id, email, username, type };
-    const { accessToken, refreshToken } = tokenService.generateToken(payload);
-
-    await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
-
-    res.cookie('accessToken', accessToken, {
-        maxAge: 1000 * 60 * 60 * 24 * 30,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-    });
-
-    res.cookie('refreshToken', refreshToken, {
-        maxAge: 1000 * 60 * 60 * 24 * 30,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-    });
-
-    console.log('✅ Tokens refreshed');
-    res.json({ success: true, message: 'Secure access has been granted', user: new UserDto(user) });
-};
+        try {
+            const { refreshToken: refreshTokenFromCookie } = req.cookies;
+    
+            if (!refreshTokenFromCookie) {
+                console.log('❌ No refresh token in cookies');
+                return res.status(401).json({ success: false, message: 'No refresh token found' });
+            }
+    
+            let userData;
+            try {
+                userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
+            } catch (err) {
+                console.log('❌ Invalid refresh token', err.message);
+                res.clearCookie('refreshToken');
+                res.clearCookie('accessToken');
+                return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+            }
+    
+            const { _id, email, username, type } = userData;
+    
+            const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
+            if (!token) {
+                console.log('❌ Refresh token not found in DB');
+                res.clearCookie('refreshToken');
+                res.clearCookie('accessToken');
+                return res.status(401).json({ success: false, message: 'Unauthorized Access' });
+            }
+    
+            const user = await userService.findUser({ email });
+            if (!user || user.status !== 'active') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'There is a problem with your account. Please contact admin.',
+                });
+            }
+    
+            const payload = { _id, email, username, type };
+            const { accessToken, refreshToken } = tokenService.generateToken(payload);
+    
+            await tokenService.updateRefreshToken(_id, refreshTokenFromCookie, refreshToken);
+    
+            // Set Cookies
+            res.cookie('accessToken', accessToken, {
+                maxAge: 1000 * 60 * 60 * 24 * 30,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
+    
+            res.cookie('refreshToken', refreshToken, {
+                maxAge: 1000 * 60 * 60 * 24 * 30,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
+    
+            console.log('✅ Tokens refreshed');
+    
+            res.json({
+                success: true,
+                message: 'Secure access has been granted',
+                user: new UserDto(user)
+            });
+    
+        } catch (error) {
+            console.error("🔥 Refresh handler crashed:", error.message);
+            return res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    };
+    
 
 
 }
