@@ -11,18 +11,18 @@ const auth = async (req, res, next) => {
   try {
     if (!accessTokenFromCookie) {
       console.log("❌ No access token in cookie");
-      return next(ErrorHandler.unAuthorized());
+      return next(ErrorHandler.unauthorized());
     }
 
     const userData = await tokenService.verifyAccessToken(accessTokenFromCookie);
     if (!userData) {
       console.log("Invalid access token");
-      return next(ErrorHandler.unAuthorized());
+      return next(ErrorHandler.unauthorized());
     }
 
     const user = await userService.findUser({ _id: userData._id }).populate("company");
     if (!user || user.status !== 'active') {
-      return next(ErrorHandler.unAuthorized('There is a problem with your account, Please contact to the admin'));
+      return next(ErrorHandler.unauthorized('There is a problem with your account, Please contact to the admin'));
     }
 
     req.user = {
@@ -40,18 +40,18 @@ const auth = async (req, res, next) => {
     if (e instanceof TokenExpiredError) {
       console.log("Trying to refresh token");
 
-      if (!refreshTokenFromCookie) return next(ErrorHandler.unAuthorized());
+      if (!refreshTokenFromCookie) return next(ErrorHandler.unauthorized());
 
       try {
         const userData = await tokenService.verifyRefreshToken(refreshTokenFromCookie);
         const { _id } = userData;
 
         const token = await tokenService.findRefreshToken(_id, refreshTokenFromCookie);
-        if (!token) return next(ErrorHandler.unAuthorized());
+        if (!token) return next(ErrorHandler.unauthorized());
 
         const fullUser = await userService.findUser({ _id }).populate("company", "name");
         if (!fullUser || fullUser.status !== 'active') {
-          return next(ErrorHandler.unAuthorized('There is a problem with your account, Please contact to the admin'));
+          return next(ErrorHandler.unauthorized('There is a problem with your account, Please contact to the admin'));
         }
 
         const payload = {
@@ -90,12 +90,12 @@ const auth = async (req, res, next) => {
         return next();
       } catch (refreshErr) {
         console.log("Refresh token error:", refreshErr.message);
-        return next(ErrorHandler.unAuthorized());
+        return next(ErrorHandler.unauthorized());
       }
     }
 
     console.log("Final auth failure");
-    return next(ErrorHandler.unAuthorized());
+    return next(ErrorHandler.unauthorized());
   }
 };
 

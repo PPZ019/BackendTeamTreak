@@ -21,7 +21,9 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const roleRoutes = require('./routes/RoleRoutes');
 const performanceRoute = require('./routes/performance-routes');
 const documentRoutes = require('./routes/documentRoutes');
-
+const form16Routes = require('./routes/form16.routes');
+const form24qRoutes = require('./routes/form24q.routes');
+const itDeclarationRoutes = require('./routes/itDeclaration.routes');
 
 
 const app = express();
@@ -60,6 +62,9 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/performance", performanceRoute);
 app.use('/api/expense', expenseClaimRoutes);
+app.use('/api/form16', form16Routes);
+app.use('/api/form24q', form24qRoutes);
+app.use('/api/itDeclaration', itDeclarationRoutes);
 
 const path = require('path');
 
